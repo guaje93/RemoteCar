@@ -192,6 +192,8 @@ namespace WpfApp1
             if (e.Key == Key.Space)
             {
                 remoteFlag = !remoteFlag;
+                TurnStateEnum = TurnStateEnum.RestServo;
+                RideStateEnum = RideStateEnum.RestEngine;
             }
         }
 
