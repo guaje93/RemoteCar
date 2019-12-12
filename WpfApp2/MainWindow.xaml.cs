@@ -63,11 +63,11 @@ namespace WpfApp2
         }
         private void SetTurnRequest(string parameter)
         {
-            _button.Content = parameter;
+            _button2.Content = parameter;
             var r = new Random();
             Brush brush = new SolidColorBrush(Color.FromRgb((byte)r.Next(1, 255),
                           (byte)r.Next(1, 255), (byte)r.Next(1, 233))); SolidColorBrush solidColorBrush = new SolidColorBrush();
-            _button.Background = brush;
+            _button2.Background = brush;
             //SocketSendReceive(parameter);
         }
 
@@ -113,7 +113,7 @@ namespace WpfApp2
                 RideStateEnum = RideStateEnum.Backward;
 
             }
-            else if (e.Key == Key.A)
+            if (e.Key == Key.A)
             {
                 TurnStateEnum = TurnStateEnum.Left;
             }

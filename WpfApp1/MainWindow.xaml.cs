@@ -1,48 +1,40 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Microsoft.Kinect;
+using Microsoft.Kinect.Toolkit;
+using System;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using Microsoft.Kinect;
-using Microsoft.Kinect.Toolkit;
-using System.Globalization;
 
 namespace WpfApp1
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
         private double _leftHandPosition_X;
         private double _rightHandPosition_Y;
         private KinectSensor _sensor;
         private Socket _socket;
-
+        private bool remoteFlag;
+        private bool counterStarted;
         private TurnStateEnum _turnStateEnum = TurnStateEnum.RestServo;
         private RideStateEnum _rideStateEnum = RideStateEnum.RestEngine;
-      
+
         public TurnStateEnum TurnStateEnum
         {
             get => _turnStateEnum;
             set
             {
-                if (value != _turnStateEnum)
-                {
-                    _turnStateEnum = value;
-                    SetTurnRequest(((TurnStateEnum)_turnStateEnum).ToString());
-                }
+                if (remoteFlag)
+                    if (value != _turnStateEnum)
+                    {
+                        _turnStateEnum = value;
+                        //  SetTurnRequest(((TurnStateEnum)_turnStateEnum).ToString());
+                    }
             }
         }
 
@@ -51,11 +43,12 @@ namespace WpfApp1
             get => _rideStateEnum;
             set
             {
-                if (value != _rideStateEnum)
-                {
-                    _rideStateEnum = value;
-                    SetRideRequest(((RideStateEnum)_rideStateEnum).ToString());
-                }
+                if (remoteFlag)
+                    if (value != _rideStateEnum)
+                    {
+                        _rideStateEnum = value;
+                        //  SetRideRequest(((RideStateEnum)_rideStateEnum).ToString());
+                    }
             }
         }
 
@@ -88,20 +81,16 @@ namespace WpfApp1
                 margin.Left = KinnectXValueMapper(_leftHandPosition_X);
                 leftHandButton.Margin = margin;
                 if (KinnectXValueMapper(_leftHandPosition_X) < 75)
-                {
                     TurnStateEnum = TurnStateEnum.Left;
-                }
+
                 else if (KinnectXValueMapper(_leftHandPosition_X) > 475)
-                {
                     TurnStateEnum = TurnStateEnum.Right;
-                }
+
                 else
-                {
                     TurnStateEnum = TurnStateEnum.RestServo;
-                }
             }
         }
-        
+
         public double RightHandPosition_Y
         {
             get => _rightHandPosition_Y; set
@@ -140,20 +129,20 @@ namespace WpfApp1
             Loaded += MainWindowLoaded;
             try
             {
-              // _socket = ConnectSocket();
+                // _socket = ConnectSocket();
             }
             catch (Exception e)
             {
 
-                
+
             }
-            finally 
+            finally
             {
-             //   _socket.Dispose();
+                //   _socket.Dispose();
             }
         }
 
-        
+
         private static Socket ConnectSocket(string server = "192.168.43.113", int port = 54000)
         {
             Socket s = null;
@@ -180,11 +169,11 @@ namespace WpfApp1
         {
             Byte[] bytesSent = Encoding.ASCII.GetBytes(request);
 
-                if (_socket == null)
-                    return ("Connection failed");
+            if (_socket == null)
+                return ("Connection failed");
 
-                // Send request to the server.
-                _socket.Send(bytesSent, bytesSent.Length, 0);
+            // Send request to the server.
+            _socket.Send(bytesSent, bytesSent.Length, 0);
             return request;
         }
 
@@ -194,22 +183,33 @@ namespace WpfApp1
             sensorStatus.KinectChanged += KinectSensorChooserKinectChanged;
             kinectChooser.KinectSensorChooser = sensorStatus;
             sensorStatus.Start();
+            this.KeyDown += new KeyEventHandler(MainWindow_KeyDown);
+
         }
+
+        private void MainWindow_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Space)
+            {
+                remoteFlag = !remoteFlag;
+            }
+        }
+
+
         private void KinectSensorChooserKinectChanged(object sender, KinectChangedEventArgs e)
         {
-
-            if (_sensor != null) _sensor.SkeletonFrameReady -= KinectSkeletonFrameReady;
-
+            if (_sensor != null)
+                _sensor.SkeletonFrameReady -= KinectSkeletonFrameReady;
             _sensor = e.NewSensor;
 
             if (_sensor == null) return;
 
-           
-            _sensor.SkeletonStream.Enable(); _sensor.SkeletonFrameReady += KinectSkeletonFrameReady;
+            _sensor.SkeletonStream.Enable();
+            _sensor.SkeletonFrameReady += KinectSkeletonFrameReady;
+
         }
         private void KinectSkeletonFrameReady(object sender, SkeletonFrameReadyEventArgs e)
         {
-
             var skeletons = new Skeleton[0];
 
             using (var skeletonFrame = e.OpenSkeletonFrame())
@@ -218,12 +218,34 @@ namespace WpfApp1
                 {
                     skeletons = new Skeleton[skeletonFrame.SkeletonArrayLength];
                     skeletonFrame.CopySkeletonDataTo(skeletons);
+
+                    if (!counterStarted && !remoteFlag && KinnectXValueMapper(LeftHandPosition_X) > 225 && KinnectXValueMapper(LeftHandPosition_X) < 325 && KinnectYValueMapper(RightHandPosition_Y) > 175 && KinnectYValueMapper(RightHandPosition_Y) < 275)
+                    {
+                        counterStarted = !counterStarted;
+                        var task = new Task(() =>
+                        {
+                            for (int i = 3; i > 0; i--)
+                            {
+                                topButton.Dispatcher.Invoke(
+                                    new Action(() => { topButton.Content = i.ToString(); }));
+                                Thread.Sleep(1000);
+                            }
+                            remoteFlag = true;
+                            topButton.Dispatcher.Invoke(
+                                    new Action(() =>
+                                    {
+                                        topButton.Content = "";
+                                    }));
+                        counterStarted = !counterStarted;
+                        });
+                        task.Start();
+                    }
                 }
+
                 else
                 {
                     TurnStateEnum = TurnStateEnum.RestServo;
                     RideStateEnum = RideStateEnum.RestEngine;
-
                 }
             }
 
@@ -234,13 +256,13 @@ namespace WpfApp1
             if (skel == null) { return; }
 
             var rightHand = skel.Joints[JointType.WristRight];
-            RightHandPosition_Y = Math.Round(rightHand.Position.Y,2);
-            
+            RightHandPosition_Y = Math.Round(rightHand.Position.Y, 2);
+
             var leftHand = skel.Joints[JointType.WristLeft];
             LeftHandPosition_X = Math.Round(leftHand.Position.X, 2);
         }
     }
 
-    public enum TurnStateEnum {Right, Left, RestServo }
-    public enum RideStateEnum {Forward, Backward, RestEngine }
+    public enum TurnStateEnum { Right, Left, RestServo }
+    public enum RideStateEnum { Forward, Backward, RestEngine }
 }
