@@ -221,9 +221,9 @@ namespace WpfApp1
 
                     if (!counterStarted && !remoteFlag && KinnectXValueMapper(LeftHandPosition_X) > 225 && KinnectXValueMapper(LeftHandPosition_X) < 325 && KinnectYValueMapper(RightHandPosition_Y) > 175 && KinnectYValueMapper(RightHandPosition_Y) < 275)
                     {
-                        counterStarted = !counterStarted;
                         var task = new Task(() =>
                         {
+                            counterStarted = !counterStarted;
                             for (int i = 3; i > 0; i--)
                             {
                                 topButton.Dispatcher.Invoke(
@@ -231,12 +231,12 @@ namespace WpfApp1
                                 Thread.Sleep(1000);
                             }
                             remoteFlag = true;
+                            counterStarted = !counterStarted;
                             topButton.Dispatcher.Invoke(
                                     new Action(() =>
                                     {
                                         topButton.Content = "";
                                     }));
-                        counterStarted = !counterStarted;
                         });
                         task.Start();
                     }
